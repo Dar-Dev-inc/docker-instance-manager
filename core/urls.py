@@ -14,6 +14,7 @@ urlpatterns = [
 
     # API endpoints
     path('api/instance/<int:instance_id>/status/', views.instance_status_api, name='instance_status_api'),
+    path('api/instance/<int:instance_id>/stats/', views.instance_stats_api, name='instance_stats_api'),
     path('api/dashboard/status/', views.dashboard_status_api, name='dashboard_status_api'),
 
     path('audit-logs/', views.AuditLogListView.as_view(), name='audit_logs'),

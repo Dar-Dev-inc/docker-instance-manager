@@ -22,6 +22,7 @@ class Profile(models.Model):
 class Template(models.Model):
     """Docker container templates for launching instances"""
     name = models.CharField(max_length=100, unique=True)
+    version = models.CharField(max_length=50, default='1.0', help_text='Template version')
     docker_image = models.CharField(max_length=200)
     default_ports = models.JSONField(
         default=dict,
@@ -47,6 +48,11 @@ class Template(models.Model):
         default=dict,
         blank=True,
         help_text='Volume mount paths, e.g., {"/workspace": "/home/coder/project", "/data": "/var/lib/data"}'
+    )
+    health_check = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Health check configuration, e.g., {"test": ["CMD", "curl", "-f", "http://localhost/"], "interval": 30}'
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

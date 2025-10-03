@@ -304,3 +304,55 @@ class DockerManager:
             error_msg = f"Unexpected error pulling image: {str(e)}"
             logger.error(error_msg)
             return False, error_msg
+
+    def get_container_stats(self, container_id):
+        """
+        Get resource usage statistics for a container.
+
+        Args:
+            container_id: Docker container ID
+
+        Returns:
+            dict: Resource statistics with cpu_percent, memory_usage, memory_limit
+        """
+        try:
+            container = self.client.containers.get(container_id)
+            stats = container.stats(stream=False)
+
+            # Calculate CPU percentage
+            cpu_delta = stats['cpu_stats']['cpu_usage']['total_usage'] - \
+                       stats['precpu_stats']['cpu_usage']['total_usage']
+            system_delta = stats['cpu_stats']['system_cpu_usage'] - \
+                          stats['precpu_stats']['system_cpu_usage']
+            cpu_count = stats['cpu_stats']['online_cpus']
+
+            cpu_percent = 0.0
+            if system_delta > 0 and cpu_delta > 0:
+                cpu_percent = (cpu_delta / system_delta) * cpu_count * 100.0
+
+            # Get memory stats
+            memory_usage = stats['memory_stats'].get('usage', 0)
+            memory_limit = stats['memory_stats'].get('limit', 0)
+            memory_percent = 0.0
+            if memory_limit > 0:
+                memory_percent = (memory_usage / memory_limit) * 100.0
+
+            # Convert bytes to MB
+            memory_usage_mb = memory_usage / (1024 * 1024)
+            memory_limit_mb = memory_limit / (1024 * 1024)
+
+            return {
+                'cpu_percent': round(cpu_percent, 2),
+                'memory_usage_mb': round(memory_usage_mb, 2),
+                'memory_limit_mb': round(memory_limit_mb, 2),
+                'memory_percent': round(memory_percent, 2),
+            }
+
+        except NotFound:
+            return {'error': 'Container not found'}
+        except KeyError as e:
+            logger.warning(f"Missing stats key: {e}")
+            return {'error': 'Incomplete stats data'}
+        except Exception as e:
+            logger.error(f"Error getting container stats: {e}")
+            return {'error': str(e)}
