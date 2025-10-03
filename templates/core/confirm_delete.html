@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirm Delete - Docker Manager{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Confirm Deletion</h5>
+            </div>
+            <div class="card-body">
+                <p>Are you sure you want to delete the following instance?</p>
+
+                <div class="alert alert-warning">
+                    <strong>Instance:</strong> {{ instance.name|default:instance.template.name }}<br>
+                    <strong>Template:</strong> {{ instance.template.name }}<br>
+                    <strong>Status:</strong> {{ instance.get_status_display }}
+                    {% if instance.volume_name %}
+                    <br><strong>Persistent Volume:</strong> {{ instance.volume_name }}
+                    {% endif %}
+                </div>
+
+                <p class="text-danger">
+                    <strong>Warning:</strong> This action cannot be undone. The container will be permanently removed.
+                </p>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    {% if instance.volume_name %}
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Data Preservation:</strong> This instance has a persistent data volume.
+                        By default, the volume will be preserved so you can access your data later or attach it to a new instance.
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="delete_volume" id="delete_volume">
+                        <label class="form-check-label text-danger" for="delete_volume">
+                            <strong>Also delete the data volume permanently</strong> (All files will be lost!)
+                        </label>
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Yes, Delete Instance
+                    </button>
+                </form>
+                <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Overview - Docker Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-speedometer"></i> Admin Dashboard</h1>
+</div>
+
+<!-- Platform Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white shadow">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1">Total Users</h6>
+                        <h2 class="mb-0">{{ total_users }}</h2>
+                        <small>{{ active_users }} active</small>
+                    </div>
+                    <i class="bi bi-people" style="font-size: 3rem; opacity: 0.3;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-success text-white shadow">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1">Running Instances</h6>
+                        <h2 class="mb-0">{{ running_instances }}</h2>
+                        <small>of {{ total_instances }} total</small>
+                    </div>
+                    <i class="bi bi-play-circle" style="font-size: 3rem; opacity: 0.3;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark shadow">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1">Stopped</h6>
+                        <h2 class="mb-0">{{ stopped_instances }}</h2>
+                        <small>instances</small>
+                    </div>
+                    <i class="bi bi-pause-circle" style="font-size: 3rem; opacity: 0.3;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-info text-white shadow">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1">Templates</h6>
+                        <h2 class="mb-0">{{ total_templates }}</h2>
+                        <small>{{ templates_with_volumes }} with volumes</small>
+                    </div>
+                    <i class="bi bi-box-seam" style="font-size: 3rem; opacity: 0.3;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Links -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="btn-group" role="group">
+            <a href="{% url 'admin_users' %}" class="btn btn-primary">
+                <i class="bi bi-people"></i> Manage Users
+            </a>
+            <a href="{% url 'admin_all_instances' %}" class="btn btn-primary">
+                <i class="bi bi-server"></i> All Instances
+            </a>
+            <a href="{% url 'admin:index' %}" class="btn btn-secondary">
+                <i class="bi bi-gear"></i> Django Admin
+            </a>
+            <a href="{% url 'template_list' %}" class="btn btn-secondary">
+                <i class="bi bi-collection"></i> Templates
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Top Users by Instance Count -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <strong><i class="bi bi-graph-up"></i> Top Users by Instance Count</strong>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Total</th>
+                            <th>Running</th>
+                            <th>Stopped</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in user_stats %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'admin_user_detail' user.id %}">{{ user.username }}</a>
+                            </td>
+                            <td>{{ user.total_instances }}</td>
+                            <td><span class="badge bg-success">{{ user.running }}</span></td>
+                            <td><span class="badge bg-secondary">{{ user.stopped }}</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-muted text-center">No users with instances</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <strong><i class="bi bi-clock-history"></i> Recent Activity</strong>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% for log in recent_logs %}
+                <div class="mb-2 pb-2 border-bottom">
+                    <small class="text-muted">{{ log.timestamp|timesince }} ago</small><br>
+                    <strong>{{ log.user.username }}</strong> - {{ log.get_action_display }}
+                    {% if log.details %}
+                    <br><small class="text-muted">{{ log.details|truncatewords:15 }}</small>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <p class="text-muted">No recent activity</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Instances -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <strong><i class="bi bi-server"></i> Recent Instances</strong>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Instance</th>
+                                <th>Template</th>
+                                <th>Status</th>
+                                <th>Volume</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for instance in recent_instances %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'admin_user_detail' instance.user.id %}">{{ instance.user.username }}</a>
+                                </td>
+                                <td>{{ instance.name|default:instance.template.name }}</td>
+                                <td>{{ instance.template.name }}</td>
+                                <td>
+                                    <span class="badge
+                                        {% if instance.status == 'running' %}bg-success
+                                        {% elif instance.status == 'stopped' %}bg-secondary
+                                        {% elif instance.status == 'pending' %}bg-warning
+                                        {% else %}bg-danger
+                                        {% endif %}">
+                                        {{ instance.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if instance.volume_name %}
+                                    <i class="bi bi-hdd text-success" title="{{ instance.volume_name }}"></i>
+                                    {% else %}
+                                    <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ instance.created_at|timesince }} ago</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">No instances yet</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

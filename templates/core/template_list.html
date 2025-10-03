@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Templates - Docker Manager{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-collection"></i> Available Templates</h1>
+
+{% if templates %}
+<div class="row">
+    {% for template in templates %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">{{ template.name }}</h5>
+                <p class="card-text text-muted">{{ template.description|default:"No description available" }}</p>
+
+                <hr>
+
+                <div class="mb-2">
+                    <small class="text-muted">
+                        <i class="bi bi-hdd"></i> Image: <code>{{ template.docker_image }}</code>
+                    </small>
+                </div>
+
+                <div class="mb-2">
+                    <small class="text-muted">
+                        <i class="bi bi-cpu"></i> CPU Limit: {{ template.cpu_limit }} cores
+                    </small>
+                </div>
+
+                <div class="mb-2">
+                    <small class="text-muted">
+                        <i class="bi bi-memory"></i> Memory: {{ template.memory_limit }} MB
+                    </small>
+                </div>
+
+                {% if template.default_ports %}
+                <div class="mb-2">
+                    <small class="text-muted">
+                        <i class="bi bi-ethernet"></i> Ports:
+                        {% for service, port in template.default_ports.items %}
+                            {{ service }}:{{ port }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{% url 'create_instance' template.id %}" class="btn btn-primary w-100">
+                    <i class="bi bi-plus-circle"></i> Create Instance
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No templates available yet. Please contact your administrator.
+</div>
+{% endif %}
+
+<a href="{% url 'dashboard' %}" class="btn btn-secondary mt-3">
+    <i class="bi bi-arrow-left"></i> Back to Dashboard
+</a>
+{% endblock %}

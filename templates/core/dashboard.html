@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Docker Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
+    <a href="{% url 'template_list' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> New Instance
+    </a>
+</div>
+
+{% if instances %}
+<div class="row">
+    {% for instance in instances %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>{{ instance.name|default:instance.template.name }}</strong>
+                <span class="badge
+                    {% if instance.status == 'running' %}bg-success
+                    {% elif instance.status == 'stopped' %}bg-secondary
+                    {% elif instance.status == 'pending' %}bg-warning
+                    {% else %}bg-danger
+                    {% endif %}">
+                    {{ instance.get_status_display }}
+                </span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-2">
+                    <i class="bi bi-box"></i> {{ instance.template.name }}
+                </p>
+                <p class="text-muted mb-2">
+                    <small><i class="bi bi-clock"></i> Created {{ instance.created_at|timesince }} ago</small>
+                </p>
+
+                {% if instance.status == 'running' and instance.host_ports %}
+                <div class="mb-3">
+                    <strong>Access:</strong>
+                    {% for service, port in instance.host_ports.items %}
+                    <div>
+                        <a href="http://localhost:{{ port }}" target="_blank" class="text-decoration-none">
+                            <i class="bi bi-link-45deg"></i> {{ service }}: {{ port }}
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if instance.error_message %}
+                <div class="alert alert-danger small mb-2">
+                    {{ instance.error_message }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-transparent">
+                <div class="btn-group w-100" role="group">
+                    <a href="{% url 'instance_detail' instance.id %}" class="btn btn-sm btn-info">
+                        <i class="bi bi-info-circle"></i>
+                    </a>
+                    {% if instance.status == 'running' %}
+                    <a href="{% url 'stop_instance' instance.id %}" class="btn btn-sm btn-warning"
+                       onclick="return confirm('Stop this instance?')">
+                        <i class="bi bi-stop-circle"></i>
+                    </a>
+                    {% elif instance.status == 'stopped' %}
+                    <a href="{% url 'restart_instance' instance.id %}" class="btn btn-sm btn-success"
+                       onclick="return confirm('Restart this instance?')">
+                        <i class="bi bi-play-circle"></i>
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'delete_instance' instance.id %}" class="btn btn-sm btn-danger">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+    <p class="text-muted mt-3">No instances yet. Create your first instance from a template!</p>
+    <a href="{% url 'template_list' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Browse Templates
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh instance status every 5 seconds
+setInterval(function() {
+    location.reload();
+}, 5000);
+</script>
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}All Instances - Admin - Docker Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-server"></i> All Instances</h1>
+    <a href="{% url 'admin_overview' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<!-- Filter Controls -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="status" class="form-label">Status Filter</label>
+                <select class="form-select" id="status" name="status" onchange="this.form.submit()">
+                    <option value="all" {% if current_status == 'all' %}selected{% endif %}>All Statuses</option>
+                    <option value="running" {% if current_status == 'running' %}selected{% endif %}>Running</option>
+                    <option value="stopped" {% if current_status == 'stopped' %}selected{% endif %}>Stopped</option>
+                    <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="error" {% if current_status == 'error' %}selected{% endif %}>Error</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="user" class="form-label">User Filter</label>
+                <select class="form-select" id="user" name="user" onchange="this.form.submit()">
+                    <option value="">All Users</option>
+                    {% for u in users %}
+                    <option value="{{ u.id }}" {% if current_user == u.id|stringformat:"s" %}selected{% endif %}>
+                        {{ u.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <a href="{% url 'admin_all_instances' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-clockwise"></i> Clear Filters
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Instances Table -->
+<div class="card shadow-sm">
+    <div class="card-header">
+        <strong><i class="bi bi-list"></i> Instances ({{ instances.count }})</strong>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Instance Name</th>
+                        <th>Template</th>
+                        <th>Status</th>
+                        <th>Volume</th>
+                        <th>Ports</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for instance in instances %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'admin_user_detail' instance.user.id %}">
+                                {{ instance.user.username }}
+                            </a>
+                        </td>
+                        <td>{{ instance.name|default:instance.template.name }}</td>
+                        <td>{{ instance.template.name }}</td>
+                        <td>
+                            <span class="badge
+                                {% if instance.status == 'running' %}bg-success
+                                {% elif instance.status == 'stopped' %}bg-secondary
+                                {% elif instance.status == 'pending' %}bg-warning
+                                {% else %}bg-danger
+                                {% endif %}">
+                                {{ instance.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if instance.volume_name %}
+                            <i class="bi bi-hdd text-success" title="{{ instance.volume_name }}"></i>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if instance.host_ports %}
+                            <small>
+                                {% for service, port in instance.host_ports.items %}
+                                {{ port }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </small>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ instance.created_at|timesince }} ago</td>
+                        <td>
+                            <a href="{% url 'admin_user_detail' instance.user.id %}" class="btn btn-sm btn-info">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">No instances found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

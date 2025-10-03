@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+
+{% block title %}Instance Details - Docker Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-info-circle"></i> Instance Details</h1>
+    <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <strong>{{ instance.name|default:instance.template.name }}</strong>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Status:</dt>
+                    <dd class="col-sm-7">
+                        <span class="badge
+                            {% if instance.status == 'running' %}bg-success
+                            {% elif instance.status == 'stopped' %}bg-secondary
+                            {% elif instance.status == 'pending' %}bg-warning
+                            {% else %}bg-danger
+                            {% endif %}">
+                            {{ instance.get_status_display }}
+                        </span>
+                    </dd>
+
+                    <dt class="col-sm-5">Template:</dt>
+                    <dd class="col-sm-7">{{ instance.template.name }}</dd>
+
+                    <dt class="col-sm-5">Created:</dt>
+                    <dd class="col-sm-7">{{ instance.created_at|date:"Y-m-d H:i" }}</dd>
+
+                    {% if instance.container_id %}
+                    <dt class="col-sm-5">Container ID:</dt>
+                    <dd class="col-sm-7"><code>{{ instance.container_id|slice:":12" }}</code></dd>
+                    {% endif %}
+
+                    {% if instance.volume_name %}
+                    <dt class="col-sm-5">Data Volume:</dt>
+                    <dd class="col-sm-7">
+                        <code>{{ instance.volume_name }}</code>
+                        <br><small class="text-success"><i class="bi bi-check-circle"></i> Persistent storage enabled</small>
+                    </dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+
+        {% if instance.volume_name %}
+        <div class="card shadow-sm mb-4 border-success">
+            <div class="card-header bg-success text-white">
+                <strong><i class="bi bi-hdd"></i> Persistent Storage</strong>
+            </div>
+            <div class="card-body">
+                <p class="mb-2"><strong>Volume:</strong> <code>{{ instance.volume_name }}</code></p>
+                {% if instance.template.volume_mounts %}
+                <p class="mb-2"><strong>Mount Points:</strong></p>
+                <ul class="small mb-0">
+                    {% for label, path in instance.template.volume_mounts.items %}
+                    <li><code>{{ path }}</code> - {{ label }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                <div class="alert alert-info mt-3 mb-0 small">
+                    <i class="bi bi-info-circle"></i> Your data persists even when the container is stopped or restarted. When you delete this instance, you can choose to keep or remove the volume.
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if instance.status == 'running' and service_urls %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <strong>Access URLs</strong>
+            </div>
+            <div class="card-body">
+                {% for service, url in service_urls.items %}
+                <div class="mb-2">
+                    <strong>{{ service|title }}:</strong><br>
+                    <a href="{{ url }}" target="_blank" class="text-decoration-none">
+                        <i class="bi bi-box-arrow-up-right"></i> {{ url }}
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <strong>Actions</strong>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if instance.status == 'running' %}
+                    <a href="{% url 'stop_instance' instance.id %}" class="btn btn-warning"
+                       onclick="return confirm('Stop this instance?')">
+                        <i class="bi bi-stop-circle"></i> Stop
+                    </a>
+                    {% elif instance.status == 'stopped' %}
+                    <a href="{% url 'restart_instance' instance.id %}" class="btn btn-success"
+                       onclick="return confirm('Restart this instance?')">
+                        <i class="bi bi-play-circle"></i> Restart
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'delete_instance' instance.id %}" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Delete
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <strong><i class="bi bi-terminal"></i> Container Logs</strong>
+            </div>
+            <div class="card-body">
+                {% if logs %}
+                <pre class="bg-dark text-light p-3 rounded" style="max-height: 500px; overflow-y: auto;"><code>{{ logs }}</code></pre>
+                {% else %}
+                <p class="text-muted">No logs available yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if instance.error_message %}
+        <div class="alert alert-danger mt-3">
+            <strong><i class="bi bi-exclamation-triangle"></i> Error:</strong><br>
+            {{ instance.error_message }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

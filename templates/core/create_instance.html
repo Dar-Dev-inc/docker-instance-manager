@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Instance - Docker Manager{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-plus-circle"></i> Create New Instance</h1>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">{{ template.name }}</h5>
+                <p class="card-text">{{ template.description|default:"No description available" }}</p>
+
+                <hr>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Instance Name (optional)</label>
+                        <input type="text" class="form-control" id="name" name="name"
+                               placeholder="e.g., My Development Environment">
+                        <small class="form-text text-muted">
+                            Leave blank to use template name
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6>Template Details:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-hdd"></i> <strong>Image:</strong> <code>{{ template.docker_image }}</code></li>
+                            <li><i class="bi bi-cpu"></i> <strong>CPU Limit:</strong> {{ template.cpu_limit }} cores</li>
+                            <li><i class="bi bi-memory"></i> <strong>Memory:</strong> {{ template.memory_limit }} MB</li>
+                            {% if template.default_ports %}
+                            <li>
+                                <i class="bi bi-ethernet"></i> <strong>Services:</strong>
+                                {% for service, port in template.default_ports.items %}
+                                    {{ service }} (port {{ port }}){% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        This will start a Docker container with randomly assigned host ports to avoid conflicts.
+                        Container creation may take a few moments.
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-play-fill"></i> Create and Start
+                        </button>
+                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

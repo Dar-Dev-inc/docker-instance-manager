@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ viewed_user.username }} - Admin - Docker Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-person-circle"></i> {{ viewed_user.username }}</h1>
+    <a href="{% url 'admin_users' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Users
+    </a>
+</div>
+
+<div class="row">
+    <!-- User Info -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <strong>User Information</strong>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-6">Username:</dt>
+                    <dd class="col-sm-6">{{ viewed_user.username }}</dd>
+
+                    <dt class="col-sm-6">Email:</dt>
+                    <dd class="col-sm-6">{{ viewed_user.email|default:"—" }}</dd>
+
+                    <dt class="col-sm-6">Joined:</dt>
+                    <dd class="col-sm-6">{{ viewed_user.date_joined|date:"Y-m-d H:i" }}</dd>
+
+                    <dt class="col-sm-6">Last Login:</dt>
+                    <dd class="col-sm-6">{{ viewed_user.last_login|date:"Y-m-d H:i"|default:"Never" }}</dd>
+
+                    {% if viewed_user.profile %}
+                    <dt class="col-sm-6">Role:</dt>
+                    <dd class="col-sm-6">
+                        <span class="badge
+                            {% if viewed_user.profile.role == 'admin' %}bg-danger
+                            {% elif viewed_user.profile.role == 'developer' %}bg-primary
+                            {% else %}bg-secondary
+                            {% endif %}">
+                            {{ viewed_user.profile.get_role_display }}
+                        </span>
+                    </dd>
+
+                    <dt class="col-sm-6">Max Instances:</dt>
+                    <dd class="col-sm-6">{{ viewed_user.profile.max_instances }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+
+        <!-- Update Quota Form -->
+        {% if viewed_user.profile %}
+        <div class="card shadow-sm mt-3">
+            <div class="card-header">
+                <strong>Update Quotas</strong>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'admin_update_user_quota' viewed_user.id %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="max_instances" class="form-label">Max Instances</label>
+                        <input type="number" class="form-control" id="max_instances" name="max_instances"
+                               value="{{ viewed_user.profile.max_instances }}" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="role" class="form-label">Role</label>
+                        <select class="form-select" id="role" name="role" required>
+                            <option value="viewer" {% if viewed_user.profile.role == 'viewer' %}selected{% endif %}>Viewer</option>
+                            <option value="developer" {% if viewed_user.profile.role == 'developer' %}selected{% endif %}>Developer</option>
+                            <option value="admin" {% if viewed_user.profile.role == 'admin' %}selected{% endif %}>Admin</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-save"></i> Update
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Instances -->
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <strong><i class="bi bi-server"></i> Instances ({{ instances.count }})</strong>
+            </div>
+            <div class="card-body">
+                {% if instances %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Template</th>
+                                <th>Status</th>
+                                <th>Volume</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for instance in instances %}
+                            <tr>
+                                <td>{{ instance.name|default:instance.template.name }}</td>
+                                <td>{{ instance.template.name }}</td>
+                                <td>
+                                    <span class="badge
+                                        {% if instance.status == 'running' %}bg-success
+                                        {% elif instance.status == 'stopped' %}bg-secondary
+                                        {% elif instance.status == 'pending' %}bg-warning
+                                        {% else %}bg-danger
+                                        {% endif %}">
+                                        {{ instance.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if instance.volume_name %}
+                                    <i class="bi bi-hdd text-success"></i>
+                                    {% else %}
+                                    <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ instance.created_at|timesince }} ago</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center">No instances yet</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <strong><i class="bi bi-clock-history"></i> Recent Activity</strong>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% for log in logs %}
+                <div class="mb-2 pb-2 border-bottom">
+                    <small class="text-muted">{{ log.timestamp|date:"Y-m-d H:i" }}</small><br>
+                    <strong>{{ log.get_action_display }}</strong>
+                    {% if log.details %}
+                    <br><small class="text-muted">{{ log.details }}</small>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <p class="text-muted text-center">No activity logged</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
