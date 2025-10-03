@@ -14,10 +14,10 @@
 <div class="row">
     {% for instance in instances %}
     <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card h-100 shadow-sm">
+        <div class="card h-100 shadow-sm" data-instance-id="{{ instance.id }}">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <strong>{{ instance.name|default:instance.template.name }}</strong>
-                <span class="badge
+                <span class="badge status-badge
                     {% if instance.status == 'running' %}bg-success
                     {% elif instance.status == 'stopped' %}bg-secondary
                     {% elif instance.status == 'pending' %}bg-warning
@@ -47,11 +47,9 @@
                 </div>
                 {% endif %}
 
-                {% if instance.error_message %}
-                <div class="alert alert-danger small mb-2">
+                <div class="alert alert-danger small mb-2 error-message" style="display: {% if instance.error_message %}block{% else %}none{% endif %}">
                     {{ instance.error_message }}
                 </div>
-                {% endif %}
             </div>
             <div class="card-footer bg-transparent">
                 <div class="btn-group w-100" role="group">
@@ -91,9 +89,50 @@
 
 {% block extra_js %}
 <script>
-// Auto-refresh instance status every 5 seconds
-setInterval(function() {
-    location.reload();
-}, 5000);
+// Auto-update instance status via AJAX every 5 seconds
+function updateInstanceStatus() {
+    fetch('{% url "dashboard_status_api" %}')
+        .then(response => response.json())
+        .then(data => {
+            data.instances.forEach(instance => {
+                const card = document.querySelector(`[data-instance-id="${instance.id}"]`);
+                if (card) {
+                    // Update status badge
+                    const statusBadge = card.querySelector('.status-badge');
+                    if (statusBadge) {
+                        statusBadge.className = 'badge status-badge';
+                        if (instance.status === 'running') {
+                            statusBadge.classList.add('bg-success');
+                            statusBadge.textContent = 'Running';
+                        } else if (instance.status === 'stopped') {
+                            statusBadge.classList.add('bg-secondary');
+                            statusBadge.textContent = 'Stopped';
+                        } else if (instance.status === 'pending') {
+                            statusBadge.classList.add('bg-warning');
+                            statusBadge.textContent = 'Pending';
+                        } else {
+                            statusBadge.classList.add('bg-danger');
+                            statusBadge.textContent = 'Error';
+                        }
+                    }
+
+                    // Update error message
+                    const errorMsg = card.querySelector('.error-message');
+                    if (errorMsg) {
+                        if (instance.error_message) {
+                            errorMsg.textContent = instance.error_message;
+                            errorMsg.style.display = 'block';
+                        } else {
+                            errorMsg.style.display = 'none';
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => console.error('Error updating status:', error));
+}
+
+// Update every 5 seconds
+setInterval(updateInstanceStatus, 5000);
 </script>
 {% endblock %}

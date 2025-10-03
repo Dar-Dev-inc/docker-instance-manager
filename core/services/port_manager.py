@@ -39,6 +39,7 @@ class PortManager:
     def allocate_ports(self, port_mapping):
         """
         Allocate random host ports for the given container port mapping.
+        Optimized to avoid generating entire port range.
 
         Args:
             port_mapping: Dict of service_name -> container_port (e.g., {"vscode": 8080})
@@ -47,22 +48,28 @@ class PortManager:
             Dict of service_name -> host_port (e.g., {"vscode": 49152})
         """
         used_ports = self.get_used_ports()
-        available_ports = list(
-            set(range(self.port_range_start, self.port_range_end + 1)) - used_ports
-        )
-
-        if len(available_ports) < len(port_mapping):
-            raise ValueError(
-                f"Not enough available ports. Need {len(port_mapping)}, "
-                f"but only {len(available_ports)} available"
-            )
-
-        # Randomly shuffle and assign ports
-        random.shuffle(available_ports)
         allocated_ports = {}
+        max_attempts = 100  # Prevent infinite loop
 
-        for i, service_name in enumerate(port_mapping.keys()):
-            allocated_ports[service_name] = available_ports[i]
+        for service_name in port_mapping.keys():
+            for _ in range(max_attempts):
+                port = random.randint(self.port_range_start, self.port_range_end)
+                if port not in used_ports and port not in allocated_ports.values():
+                    allocated_ports[service_name] = port
+                    break
+            else:
+                # Fallback: generate full range if random selection fails
+                total_range = self.port_range_end - self.port_range_start + 1
+                if len(used_ports) + len(port_mapping) > total_range:
+                    raise ValueError(
+                        f"Not enough available ports. Need {len(port_mapping)}, "
+                        f"but only {total_range - len(used_ports)} available"
+                    )
+                # Use set difference for remaining ports
+                available = set(range(self.port_range_start, self.port_range_end + 1)) - used_ports
+                remaining_ports = list(available - set(allocated_ports.values()))
+                random.shuffle(remaining_ports)
+                allocated_ports[service_name] = remaining_ports[0]
 
         return allocated_ports
 

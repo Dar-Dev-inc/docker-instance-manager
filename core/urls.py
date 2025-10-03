@@ -11,7 +11,11 @@ urlpatterns = [
     path('instance/<int:instance_id>/stop/', views.stop_instance, name='stop_instance'),
     path('instance/<int:instance_id>/restart/', views.restart_instance, name='restart_instance'),
     path('instance/<int:instance_id>/delete/', views.delete_instance, name='delete_instance'),
+
+    # API endpoints
     path('api/instance/<int:instance_id>/status/', views.instance_status_api, name='instance_status_api'),
+    path('api/dashboard/status/', views.dashboard_status_api, name='dashboard_status_api'),
+
     path('audit-logs/', views.AuditLogListView.as_view(), name='audit_logs'),
 
     # Admin-only URLs

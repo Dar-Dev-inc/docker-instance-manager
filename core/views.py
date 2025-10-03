@@ -30,7 +30,11 @@ def dashboard(request):
 @login_required
 def instance_detail(request, instance_id):
     """Detailed view of a single instance"""
-    instance = get_object_or_404(Instance, id=instance_id, user=request.user)
+    instance = get_object_or_404(
+        Instance.objects.select_related('template', 'user'),
+        id=instance_id,
+        user=request.user
+    )
 
     # Get container logs if container exists
     logs = ""
@@ -184,6 +188,26 @@ def instance_status_api(request, instance_id):
         'error_message': instance.error_message,
         'service_urls': instance.get_service_urls(),
     })
+
+
+@login_required
+def dashboard_status_api(request):
+    """API endpoint to get status of all user instances"""
+    instances = Instance.objects.filter(user=request.user).select_related('template')
+
+    data = {
+        'instances': [
+            {
+                'id': inst.id,
+                'name': inst.name or inst.template.name,
+                'status': inst.status,
+                'error_message': inst.error_message,
+                'template_name': inst.template.name,
+            }
+            for inst in instances
+        ]
+    }
+    return JsonResponse(data)
 
 
 class TemplateListView(LoginRequiredMixin, ListView):

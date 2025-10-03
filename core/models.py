@@ -84,6 +84,12 @@ class Instance(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status'], name='instance_user_status_idx'),
+            models.Index(fields=['status', 'created_at'], name='instance_status_created_idx'),
+            models.Index(fields=['container_id'], name='instance_container_idx'),
+            models.Index(fields=['-created_at'], name='instance_created_desc_idx'),
+        ]
 
     def __str__(self):
         return f"{self.user.username} - {self.template.name} ({self.status})"
@@ -117,6 +123,11 @@ class AuditLog(models.Model):
 
     class Meta:
         ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['user', '-timestamp'], name='auditlog_user_time_idx'),
+            models.Index(fields=['action', '-timestamp'], name='auditlog_action_time_idx'),
+            models.Index(fields=['-timestamp'], name='auditlog_timestamp_idx'),
+        ]
 
     def __str__(self):
         return f"{self.user} - {self.action} at {self.timestamp}"
