@@ -11,12 +11,68 @@
 </div>
 
 {% if instances %}
-<div class="row">
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <input type="text" id="search-input" class="form-control" placeholder="Search instances...">
+            </div>
+            <div class="col-md-3">
+                <select id="status-filter" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="running">Running</option>
+                    <option value="stopped">Stopped</option>
+                    <option value="pending">Pending</option>
+                    <option value="error">Error</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select id="template-filter" class="form-select">
+                    <option value="">All Templates</option>
+                    {% for template in templates %}
+                    <option value="{{ template.name }}">{{ template.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button id="clear-filters" class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-arrow-clockwise"></i> Clear
+                </button>
+            </div>
+        </div>
+        <div class="mt-3" id="bulk-actions" style="display: none;">
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-muted"><span id="selected-count">0</span> selected</span>
+                <button id="bulk-stop" class="btn btn-sm btn-warning">
+                    <i class="bi bi-stop-circle"></i> Stop Selected
+                </button>
+                <button id="bulk-restart" class="btn btn-sm btn-success">
+                    <i class="bi bi-play-circle"></i> Restart Selected
+                </button>
+                <button id="bulk-delete" class="btn btn-sm btn-danger">
+                    <i class="bi bi-trash"></i> Delete Selected
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="instances-container">
     {% for instance in instances %}
-    <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card h-100 shadow-sm" data-instance-id="{{ instance.id }}">
+    <div class="col-md-6 col-lg-4 mb-4 instance-card"
+         data-instance-id="{{ instance.id }}"
+         data-instance-name="{{ instance.name|default:instance.template.name|lower }}"
+         data-status="{{ instance.status }}"
+         data-template="{{ instance.template.name }}">
+        <div class="card h-100 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <strong>{{ instance.name|default:instance.template.name }}</strong>
+                <div class="form-check">
+                    <input class="form-check-input instance-checkbox" type="checkbox"
+                           value="{{ instance.id }}" id="check-{{ instance.id }}">
+                    <label class="form-check-label" for="check-{{ instance.id }}">
+                        <strong>{{ instance.name|default:instance.template.name }}</strong>
+                    </label>
+                </div>
                 <span class="badge status-badge
                     {% if instance.status == 'running' %}bg-success
                     {% elif instance.status == 'stopped' %}bg-secondary
@@ -134,5 +190,114 @@ function updateInstanceStatus() {
 
 // Update every 5 seconds
 setInterval(updateInstanceStatus, 5000);
+
+// Search and filter functionality
+function filterInstances() {
+    const searchTerm = document.getElementById('search-input').value.toLowerCase();
+    const statusFilter = document.getElementById('status-filter').value;
+    const templateFilter = document.getElementById('template-filter').value;
+
+    const cards = document.querySelectorAll('.instance-card');
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+        const name = card.dataset.instanceName;
+        const status = card.dataset.status;
+        const template = card.dataset.template;
+
+        const matchesSearch = !searchTerm || name.includes(searchTerm);
+        const matchesStatus = !statusFilter || status === statusFilter;
+        const matchesTemplate = !templateFilter || template === templateFilter;
+
+        if (matchesSearch && matchesStatus && matchesTemplate) {
+            card.style.display = '';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+
+    // Show "no results" message if needed
+    const container = document.getElementById('instances-container');
+    let noResults = container.querySelector('.no-results');
+
+    if (visibleCount === 0) {
+        if (!noResults) {
+            noResults = document.createElement('div');
+            noResults.className = 'col-12 no-results';
+            noResults.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> No instances match your filters.
+                </div>
+            `;
+            container.appendChild(noResults);
+        }
+    } else {
+        if (noResults) {
+            noResults.remove();
+        }
+    }
+}
+
+// Event listeners
+document.getElementById('search-input')?.addEventListener('input', filterInstances);
+document.getElementById('status-filter')?.addEventListener('change', filterInstances);
+document.getElementById('template-filter')?.addEventListener('change', filterInstances);
+
+document.getElementById('clear-filters')?.addEventListener('click', function() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('status-filter').value = '';
+    document.getElementById('template-filter').value = '';
+    filterInstances();
+});
+
+// Bulk actions functionality
+function updateBulkActions() {
+    const checkboxes = document.querySelectorAll('.instance-checkbox:checked');
+    const bulkActionsDiv = document.getElementById('bulk-actions');
+    const selectedCount = document.getElementById('selected-count');
+
+    if (checkboxes.length > 0) {
+        bulkActionsDiv.style.display = 'block';
+        selectedCount.textContent = checkboxes.length;
+    } else {
+        bulkActionsDiv.style.display = 'none';
+    }
+}
+
+// Add listeners to all checkboxes
+document.querySelectorAll('.instance-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateBulkActions);
+});
+
+// Bulk stop
+document.getElementById('bulk-stop')?.addEventListener('click', function() {
+    const selected = Array.from(document.querySelectorAll('.instance-checkbox:checked')).map(cb => cb.value);
+    if (confirm(`Stop ${selected.length} instance(s)?`)) {
+        selected.forEach(id => {
+            window.location.href = `/instance/${id}/stop/`;
+        });
+    }
+});
+
+// Bulk restart
+document.getElementById('bulk-restart')?.addEventListener('click', function() {
+    const selected = Array.from(document.querySelectorAll('.instance-checkbox:checked')).map(cb => cb.value);
+    if (confirm(`Restart ${selected.length} instance(s)?`)) {
+        selected.forEach(id => {
+            window.location.href = `/instance/${id}/restart/`;
+        });
+    }
+});
+
+// Bulk delete
+document.getElementById('bulk-delete')?.addEventListener('click', function() {
+    const selected = Array.from(document.querySelectorAll('.instance-checkbox:checked')).map(cb => cb.value);
+    if (confirm(`Delete ${selected.length} instance(s)? This action cannot be undone.`)) {
+        selected.forEach(id => {
+            window.location.href = `/instance/${id}/delete/`;
+        });
+    }
+});
 </script>
 {% endblock %}

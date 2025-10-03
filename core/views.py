@@ -210,6 +210,20 @@ def dashboard_status_api(request):
     return JsonResponse(data)
 
 
+@login_required
+def instance_stats_api(request, instance_id):
+    """API endpoint to get container resource stats"""
+    instance = get_object_or_404(Instance, id=instance_id, user=request.user)
+
+    if not instance.container_id or instance.status != 'running':
+        return JsonResponse({'error': 'Container not running'}, status=400)
+
+    docker_manager = DockerManager()
+    stats = docker_manager.get_container_stats(instance.container_id)
+
+    return JsonResponse(stats)
+
+
 class TemplateListView(LoginRequiredMixin, ListView):
     """List all available templates"""
     model = Template
